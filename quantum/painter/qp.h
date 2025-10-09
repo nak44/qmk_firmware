@@ -563,6 +563,12 @@ int16_t qp_drawtext_recolor(painter_device_t device, uint16_t x, uint16_t y, pai
 #    define SH1107_NUM_DEVICES 0
 #endif // QUANTUM_PAINTER_SH1107_ENABLE
 
+#ifdef QUANTUM_PAINTER_SH1122_ENABLE
+#    include "qp_sh1122.h"
+#else // QUANTUM_PAINTER_SH1122_ENABLE
+#    define SH1122_NUM_DEVICES 0
+#endif // QUANTUM_PAINTER_SH1122_ENABLE
+
 #ifdef QUANTUM_PAINTER_LD7032_ENABLE
 #    include "qp_ld7032.h"
 #else // QUANTUM_PAINTER_LD7032_ENABLE

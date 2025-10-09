@@ -22,6 +22,7 @@ enum {
                      + (SSD1351_NUM_DEVICES) // SSD1351
                      + (SH1106_NUM_DEVICES)  // SH1106
                      + (SH1107_NUM_DEVICES)  // SH1107
+                     + (SH1122_NUM_DEVICES)  // SH1122
                      + (LD7032_NUM_DEVICES)  // LD7032
 };
 

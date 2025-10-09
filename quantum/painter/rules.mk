@@ -20,6 +20,8 @@ VALID_QUANTUM_PAINTER_DRIVERS := \
     sh1106_spi \
     sh1107_i2c \
     sh1107_spi \
+    sh1122_i2c \
+    sh1122_spi \
     ld7032_i2c \
     ld7032_spi
 
@@ -208,6 +210,29 @@ define handle_quantum_painter_driver
         SRC += \
             $(DRIVER_PATH)/painter/oled_panel/qp_oled_panel.c \
             $(DRIVER_PATH)/painter/sh1107/qp_sh1107.c
+
+    else ifeq ($$(strip $$(CURRENT_PAINTER_DRIVER)),sh1122_spi)
+        QUANTUM_PAINTER_NEEDS_SURFACE := yes
+        QUANTUM_PAINTER_NEEDS_COMMS_SPI := yes
+        QUANTUM_PAINTER_NEEDS_COMMS_SPI_DC_RESET := yes
+        OPT_DEFS += -DQUANTUM_PAINTER_SH1122_ENABLE -DQUANTUM_PAINTER_SH1122_SPI_ENABLE
+        COMMON_VPATH += \
+            $(DRIVER_PATH)/painter/oled_panel \
+            $(DRIVER_PATH)/painter/sh1122
+        SRC += \
+            $(DRIVER_PATH)/painter/oled_panel/qp_oled_panel.c \
+            $(DRIVER_PATH)/painter/sh1122/qp_sh1122.c
+
+    else ifeq ($$(strip $$(CURRENT_PAINTER_DRIVER)),sh1122_i2c)
+        QUANTUM_PAINTER_NEEDS_SURFACE := yes
+        QUANTUM_PAINTER_NEEDS_COMMS_I2C := yes
+        OPT_DEFS += -DQUANTUM_PAINTER_SH1122_ENABLE -DQUANTUM_PAINTER_SH1122_I2C_ENABLE
+        COMMON_VPATH += \
+            $(DRIVER_PATH)/painter/oled_panel \
+            $(DRIVER_PATH)/painter/sh1122
+        SRC += \
+            $(DRIVER_PATH)/painter/oled_panel/qp_oled_panel.c \
+            $(DRIVER_PATH)/painter/sh1122/qp_sh1122.c
 
     else ifeq ($$(strip $$(CURRENT_PAINTER_DRIVER)),ld7032_spi)
         QUANTUM_PAINTER_NEEDS_SURFACE := yes
