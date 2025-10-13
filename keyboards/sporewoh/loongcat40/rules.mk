@@ -1,1 +1,1 @@
-QUANTUM_PAINTER_DRIVERS = sh1122_spi
+# Quantum Painter drivers are specified in variant-specific rules.mk files

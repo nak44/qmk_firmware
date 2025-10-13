@@ -45,6 +45,7 @@ __attribute__((weak)) bool qp_sh1122_init(painter_device_t device, painter_rotat
         // Command,                         Delay,  N, Data[N]
         SH1122_DISPLAY_OFF,                     0,  0,
         SH1122_SET_START_LINE,                  0,  0,
+        SH1122_PAGE_ADDRESSING_MODE,            0,  0,          // Critical: Set page addressing mode
         SH1122_SET_SEGMENT_REMAP_NORMAL,        0,  0,
         SH1122_COM_SCAN_DIR_INC,                0,  0,
         SH1122_SET_CONTRAST,                    0,  1, 0x80,
