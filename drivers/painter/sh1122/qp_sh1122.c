@@ -48,7 +48,7 @@ __attribute__((weak)) bool qp_sh1122_init(painter_device_t device, painter_rotat
         SH1122_PAGE_ADDRESSING_MODE,            0,  0,          // Critical: Set page addressing mode
         SH1122_SET_SEGMENT_REMAP_NORMAL,        0,  0,
         SH1122_COM_SCAN_DIR_INC,                0,  0,
-        SH1122_SET_CONTRAST,                    0,  1, 0x80,
+        SH1122_SET_CONTRAST,                    0,  1, 0x40,    // Brightness: 0x00 (dimmest) to 0xFF (brightest). 0x40 = ~25%
         SH1122_SET_MUX_RATIO,                   0,  1, 0x3F,    // 1/64 duty
         SH1122_DC_DC_CONTROL,                   0,  1, 0x81,    // Use built-in DC-DC
         SH1122_SET_OSC_DIVFREQ,                 0,  1, 0x50,
@@ -120,6 +120,152 @@ static void qp_sh1122_flush_rot0(painter_device_t device, surface_dirty_data_t *
     }
 }
 
+// Rotation 90 degrees - transpose and flip
+static void qp_sh1122_flush_rot90(painter_device_t device, surface_dirty_data_t *dirty, const uint8_t *framebuffer) {
+    sh1122_device_t *                   sh_driver = (sh1122_device_t *)device;
+    painter_driver_t *                  driver = (painter_driver_t *)device;
+    oled_panel_painter_driver_vtable_t *vtable = (oled_panel_painter_driver_vtable_t *)driver->driver_vtable;
+
+    // For 90° rotation: physical(row, col) = logical(col, height - 1 - row)
+    // The logical framebuffer is in the rotated coordinate space
+    int min_row    = dirty->t;
+    int max_row    = dirty->b;
+    int min_column = dirty->l;
+    int max_column = dirty->r;
+
+    for (int row = min_row; row <= max_row; ++row) {
+        int     cols_required = max_column - min_column + 1;
+        uint8_t row_data[cols_required];
+        memset(row_data, 0, cols_required);
+
+        // For 90° rotation, read from logical column (which becomes physical row)
+        for (int x = min_column; x <= max_column; ++x) {
+            // Map: physical(row, x) = logical(x, height - 1 - row)
+            int      logical_x   = x;
+            int      logical_y   = sh_driver->oled.surface.base.panel_height - 1 - row;
+            uint32_t pixel_num   = logical_y * sh_driver->oled.surface.base.panel_width + logical_x;
+            uint32_t byte_offset = pixel_num / 8;
+            uint8_t  bit_offset  = pixel_num % 8;
+
+            uint8_t pixel = (framebuffer[byte_offset] >> bit_offset) & 1;
+            row_data[x - min_column] = pixel ? 0x0F : 0x00;
+        }
+
+        qp_comms_command(device, vtable->opcodes.set_page);
+        qp_comms_command(device, row);
+
+        uint8_t col_addr = min_column / 2;
+        qp_comms_command(device, vtable->opcodes.set_column_lsb | (col_addr & 0x0F));
+        qp_comms_command(device, vtable->opcodes.set_column_msb | (col_addr >> 4));
+
+        for (int i = 0; i < cols_required; i += 2) {
+            uint8_t output;
+            if (i + 1 < cols_required) {
+                output = (row_data[i] << 4) | row_data[i + 1];
+            } else {
+                output = (row_data[i] << 4);
+            }
+            qp_comms_send(device, &output, 1);
+        }
+    }
+}
+
+// Rotation 180 degrees - flip both axes
+static void qp_sh1122_flush_rot180(painter_device_t device, surface_dirty_data_t *dirty, const uint8_t *framebuffer) {
+    sh1122_device_t *                   sh_driver = (sh1122_device_t *)device;
+    painter_driver_t *                  driver = (painter_driver_t *)device;
+    oled_panel_painter_driver_vtable_t *vtable = (oled_panel_painter_driver_vtable_t *)driver->driver_vtable;
+
+    // For 180° rotation: physical(row, col) = logical(width - 1 - col, height - 1 - row)
+    int min_row    = dirty->t;
+    int max_row    = dirty->b;
+    int min_column = dirty->l;
+    int max_column = dirty->r;
+
+    for (int row = min_row; row <= max_row; ++row) {
+        int     cols_required = max_column - min_column + 1;
+        uint8_t row_data[cols_required];
+        memset(row_data, 0, cols_required);
+
+        for (int x = min_column; x <= max_column; ++x) {
+            // Map: physical(row, x) = logical(width - 1 - x, height - 1 - row)
+            int      logical_x   = sh_driver->oled.surface.base.panel_width - 1 - x;
+            int      logical_y   = sh_driver->oled.surface.base.panel_height - 1 - row;
+            uint32_t pixel_num   = logical_y * sh_driver->oled.surface.base.panel_width + logical_x;
+            uint32_t byte_offset = pixel_num / 8;
+            uint8_t  bit_offset  = pixel_num % 8;
+
+            uint8_t pixel = (framebuffer[byte_offset] >> bit_offset) & 1;
+            row_data[x - min_column] = pixel ? 0x0F : 0x00;
+        }
+
+        qp_comms_command(device, vtable->opcodes.set_page);
+        qp_comms_command(device, row);
+
+        uint8_t col_addr = min_column / 2;
+        qp_comms_command(device, vtable->opcodes.set_column_lsb | (col_addr & 0x0F));
+        qp_comms_command(device, vtable->opcodes.set_column_msb | (col_addr >> 4));
+
+        for (int i = 0; i < cols_required; i += 2) {
+            uint8_t output;
+            if (i + 1 < cols_required) {
+                output = (row_data[i] << 4) | row_data[i + 1];
+            } else {
+                output = (row_data[i] << 4);
+            }
+            qp_comms_send(device, &output, 1);
+        }
+    }
+}
+
+// Rotation 270 degrees - transpose and flip opposite to 90
+static void qp_sh1122_flush_rot270(painter_device_t device, surface_dirty_data_t *dirty, const uint8_t *framebuffer) {
+    sh1122_device_t *                   sh_driver = (sh1122_device_t *)device;
+    painter_driver_t *                  driver = (painter_driver_t *)device;
+    oled_panel_painter_driver_vtable_t *vtable = (oled_panel_painter_driver_vtable_t *)driver->driver_vtable;
+
+    // For 270° rotation: physical(row, col) = logical(height - 1 - col, row)
+    int min_row    = dirty->t;
+    int max_row    = dirty->b;
+    int min_column = dirty->l;
+    int max_column = dirty->r;
+
+    for (int row = min_row; row <= max_row; ++row) {
+        int     cols_required = max_column - min_column + 1;
+        uint8_t row_data[cols_required];
+        memset(row_data, 0, cols_required);
+
+        for (int x = min_column; x <= max_column; ++x) {
+            // Map: physical(row, x) = logical(height - 1 - x, row)
+            int      logical_x   = sh_driver->oled.surface.base.panel_height - 1 - x;
+            int      logical_y   = row;
+            uint32_t pixel_num   = logical_y * sh_driver->oled.surface.base.panel_width + logical_x;
+            uint32_t byte_offset = pixel_num / 8;
+            uint8_t  bit_offset  = pixel_num % 8;
+
+            uint8_t pixel = (framebuffer[byte_offset] >> bit_offset) & 1;
+            row_data[x - min_column] = pixel ? 0x0F : 0x00;
+        }
+
+        qp_comms_command(device, vtable->opcodes.set_page);
+        qp_comms_command(device, row);
+
+        uint8_t col_addr = min_column / 2;
+        qp_comms_command(device, vtable->opcodes.set_column_lsb | (col_addr & 0x0F));
+        qp_comms_command(device, vtable->opcodes.set_column_msb | (col_addr >> 4));
+
+        for (int i = 0; i < cols_required; i += 2) {
+            uint8_t output;
+            if (i + 1 < cols_required) {
+                output = (row_data[i] << 4) | row_data[i + 1];
+            } else {
+                output = (row_data[i] << 4);
+            }
+            qp_comms_send(device, &output, 1);
+        }
+    }
+}
+
 // Screen flush
 bool qp_sh1122_flush(painter_device_t device) {
     sh1122_device_t *driver = (sh1122_device_t *)device;
@@ -128,18 +274,19 @@ bool qp_sh1122_flush(painter_device_t device) {
         return true;
     }
 
-    // For now, only support rotation 0
-    // TODO: Implement other rotations with proper 1bpp to 4bpp conversion
     switch (driver->oled.base.rotation) {
         default:
         case QP_ROTATION_0:
             qp_sh1122_flush_rot0(device, &driver->oled.surface.dirty, driver->framebuffer);
             break;
         case QP_ROTATION_90:
+            qp_sh1122_flush_rot90(device, &driver->oled.surface.dirty, driver->framebuffer);
+            break;
         case QP_ROTATION_180:
+            qp_sh1122_flush_rot180(device, &driver->oled.surface.dirty, driver->framebuffer);
+            break;
         case QP_ROTATION_270:
-            // TODO: Implement these rotations
-            qp_dprintf("SH1122: Rotation %d not yet implemented\n", driver->oled.base.rotation);
+            qp_sh1122_flush_rot270(device, &driver->oled.surface.dirty, driver->framebuffer);
             break;
     }
 
