@@ -48,7 +48,7 @@ __attribute__((weak)) bool qp_sh1122_init(painter_device_t device, painter_rotat
         SH1122_PAGE_ADDRESSING_MODE,            0,  0,          // Critical: Set page addressing mode
         SH1122_SET_SEGMENT_REMAP_NORMAL,        0,  0,
         SH1122_COM_SCAN_DIR_INC,                0,  0,
-        SH1122_SET_CONTRAST,                    0,  1, 0x40,    // Brightness: 0x00 (dimmest) to 0xFF (brightest). 0x40 = ~25%
+        SH1122_SET_CONTRAST,                    0,  1, 0x10,    // Brightness: 0x00 (dimmest) to 0xFF (brightest). 0x10 = ~6%
         SH1122_SET_MUX_RATIO,                   0,  1, 0x3F,    // 1/64 duty
         SH1122_DC_DC_CONTROL,                   0,  1, 0x81,    // Use built-in DC-DC
         SH1122_SET_OSC_DIVFREQ,                 0,  1, 0x50,
