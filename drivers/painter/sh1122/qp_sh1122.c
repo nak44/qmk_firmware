@@ -67,58 +67,55 @@ __attribute__((weak)) bool qp_sh1122_init(painter_device_t device, painter_rotat
     return true;
 }
 
-// Helper function to convert 1bpp byte to 4bpp format (similar to u8g2's approach)
-// Each input byte (8 pixels) becomes 4 output bytes (8 pixels in 4bpp)
-static void convert_1bpp_to_4bpp(uint8_t input, uint8_t *output) {
-    // Map table: 00->0x00, 01->0x0f, 10->0xf0, 11->0xff
-    static const uint8_t map[4] = {0x00, 0x0f, 0xf0, 0xff};
-
-    // Process 4 pairs of bits (8 bits total)
-    output[3] = map[input & 0x03];
-    input >>= 2;
-    output[2] = map[input & 0x03];
-    input >>= 2;
-    output[1] = map[input & 0x03];
-    input >>= 2;
-    output[0] = map[input & 0x03];
-}
-
 // Custom flush for SH1122 with 1bpp to 4bpp conversion
 static void qp_sh1122_flush_rot0(painter_device_t device, surface_dirty_data_t *dirty, const uint8_t *framebuffer) {
     painter_driver_t *                  driver = (painter_driver_t *)device;
     oled_panel_painter_driver_vtable_t *vtable = (oled_panel_painter_driver_vtable_t *)driver->driver_vtable;
 
-    int min_page   = dirty->t / 8;
-    int max_page   = dirty->b / 8;
+    int min_row    = dirty->t;
+    int max_row    = dirty->b;
     int min_column = dirty->l;
     int max_column = dirty->r;
 
-    for (int page = min_page; page <= max_page; ++page) {
+    // SH1122 RAM is organized by rows (horizontal lines), not columns
+    // Each row must be addressed individually and sent as horizontal pixel data
+    for (int row = min_row; row <= max_row; ++row) {
         int     cols_required = max_column - min_column + 1;
-        uint8_t column_data[cols_required];
-        memset(column_data, 0, cols_required);
+        uint8_t row_data[cols_required];
+        memset(row_data, 0, cols_required);
 
-        // Build column data from 1bpp framebuffer
+        // Build row data from 1bpp framebuffer (horizontal line of pixels)
         for (int x = min_column; x <= max_column; ++x) {
-            uint16_t data_offset = x - min_column;
-            for (int y = 0; y < 8; ++y) {
-                uint32_t pixel_num   = ((page * 8) + y) * driver->panel_width + x;
-                uint32_t byte_offset = pixel_num / 8;
-                uint8_t  bit_offset  = pixel_num % 8;
-                column_data[data_offset] |= ((framebuffer[byte_offset] & (1 << bit_offset)) >> bit_offset) << y;
-            }
+            uint32_t pixel_num   = row * driver->panel_width + x;
+            uint32_t byte_offset = pixel_num / 8;
+            uint8_t  bit_offset  = pixel_num % 8;
+
+            // Extract pixel value (0 or 1) and store as 4-bit value (0x0 or 0xF)
+            uint8_t pixel = (framebuffer[byte_offset] >> bit_offset) & 1;
+            row_data[x - min_column] = pixel ? 0x0F : 0x00;
         }
 
-        // Set page and column
-        qp_comms_command(device, vtable->opcodes.set_page | page);
-        qp_comms_command(device, vtable->opcodes.set_column_lsb | (min_column & 0x0F));
-        qp_comms_command(device, vtable->opcodes.set_column_msb | (min_column & 0xF0) >> 4);
+        // Set row address for this specific row
+        qp_comms_command(device, vtable->opcodes.set_page);
+        qp_comms_command(device, row);
 
-        // Convert and send data in 4bpp format
-        for (int i = 0; i < cols_required; i++) {
-            uint8_t output[4];
-            convert_1bpp_to_4bpp(column_data[i], output);
-            qp_comms_send(device, output, 4);
+        // Set column start address (each column address is 2 pixels wide in 4bpp mode)
+        uint8_t col_addr = min_column / 2;
+        qp_comms_command(device, vtable->opcodes.set_column_lsb | (col_addr & 0x0F));
+        qp_comms_command(device, vtable->opcodes.set_column_msb | (col_addr >> 4));
+
+        // Convert and send row data in 4bpp format
+        // Pack 2 pixels (4 bits each) into each byte sent to the display
+        for (int i = 0; i < cols_required; i += 2) {
+            uint8_t output;
+            if (i + 1 < cols_required) {
+                // Two pixels available - pack both (first pixel in high nibble, second in low nibble)
+                output = (row_data[i] << 4) | row_data[i + 1];
+            } else {
+                // Only one pixel left - pack it in high nibble
+                output = (row_data[i] << 4);
+            }
+            qp_comms_send(device, &output, 1);
         }
     }
 }
