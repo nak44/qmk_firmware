@@ -4,3 +4,5 @@
 
 // Configurables
 #define TAPPING_TERM 200
+
+#define LCD_INVERT_COLOUR

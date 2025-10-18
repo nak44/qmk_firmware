@@ -5,7 +5,7 @@
 #include "qp.h"
 #include "qp_sh1122.h"
 
-#include "graphics/animu-image.qgf.c"
+#include "graphics/oled/animu-image.qgf.c"
 
 static painter_device_t oled;
 static painter_image_handle_t animu_image;
