@@ -5,4 +5,5 @@
 // Configurables
 #define TAPPING_TERM 200
 
-#define LCD_INVERT_COLOUR
+// Quantum Painter: Enable native color format support for rgb565 images
+#define QUANTUM_PAINTER_SUPPORTS_NATIVE_COLORS TRUE

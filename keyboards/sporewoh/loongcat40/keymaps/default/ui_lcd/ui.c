@@ -7,7 +7,7 @@
 #include "qp_comms.h"
 #include "qp_st77xx_opcodes.h"
 
-#include "graphics/lcd/animu-image-lcd.qgf.c"
+#include "graphics/lcd/animu-image-lcd.qgf.h"
 
 static painter_device_t lcd;
 static painter_image_handle_t animu_image;
@@ -16,53 +16,37 @@ static painter_image_handle_t animu_image;
 #define LCD_WIDTH 284
 #define LCD_HEIGHT 76
 
+
 void ui_init(void) {
-    // Initialize backlight GPIO (simple on/off control)
-    // setPinOutput(LCD_BACKLIGHT_PIN);
-    // writePinLow(LCD_BACKLIGHT_PIN);  // Turn on backlight at full brightness
-
     // Initialize ST7789 display (76x284, rotated 90 degrees)
-    lcd = qp_st7789_make_spi_device(LCD_WIDTH, LCD_HEIGHT, LCD_CS_PIN, LCD_DC_PIN, LCD_RST_PIN, 16, 3);
+    lcd = qp_st7789_make_spi_device(LCD_HEIGHT, LCD_WIDTH, LCD_CS_PIN, LCD_DC_PIN, LCD_RST_PIN, 16, 3);
 
-    qp_init(lcd, QP_ROTATION_90);
+    qp_init(lcd, QP_ROTATION_180);
+
+    qp_comms_start(lcd);
+    #ifdef LCD_INVERT_COLOUR
+    qp_comms_command(lcd, ST77XX_CMD_INVERT_ON);
+    #else
+    qp_comms_command(lcd, ST77XX_CMD_INVERT_OFF);
+    #endif
+    qp_comms_stop(lcd);
+
 
     qp_power(lcd, true);
 
-    // Apply Offset
-    qp_set_viewport_offsets(lcd, 18, 82);
+    // Apply viewport offset for this display panel
+    qp_set_viewport_offsets(lcd, 82, 18);
 
-    // Turn on the LCD and clear the display
-    qp_power(lcd, true);
-    qp_rect(lcd, 0, 0, LCD_WIDTH, LCD_HEIGHT, 255, 255, 255, true);
+    // Clear the display with yellow background
+    qp_rect(lcd, 0, 0, LCD_HEIGHT, LCD_WIDTH, 255, 255, 0, true);
 
-    // TEST: Draw red rectangle in top-left corner to verify LCD works
-    //qp_rect(lcd, 10, 10, 100, 40, 255, 0, 0, true);
-
-    // TEST: Draw green rectangle in center
-    // qp_rect(lcd, LCD_WIDTH / 2 - 30, LCD_HEIGHT / 2 - 15,
-    //         LCD_WIDTH / 2 + 30, LCD_HEIGHT / 2 + 15, 0, 255, 0, true);
-
-    // TEST: Draw blue rectangle in bottom-right
-    // qp_rect(lcd, LCD_WIDTH - 110, LCD_HEIGHT - 45,
-    //         LCD_WIDTH - 10, LCD_HEIGHT - 10, 0, 0, 255, true);
-
-    // Load the animu image (commented out for testing)
+    // Load and draw the image
     animu_image = qp_load_image_mem(gfx_cool_lcd);
     if (animu_image != NULL) {
         qp_drawimage(lcd, 0, 0, animu_image);
+        qp_flush(lcd);
+        qp_close_image(animu_image);
     }
-
-     //qp_rect(lcd, 10, 10, 100, 40, 255, 0, 0, true);
-
-    // qp_rect(lcd, LCD_WIDTH / 2 - 30, LCD_HEIGHT / 2 - 15,
-    //         LCD_WIDTH / 2 + 30, LCD_HEIGHT / 2 + 15, 0, 255, 0, true);
-
-     qp_rect(lcd, LCD_WIDTH - 110, LCD_HEIGHT - 45,
-              LCD_WIDTH - 10, LCD_HEIGHT - 10, 120, 0, 120, true);
-    qp_rect(lcd, LCD_WIDTH - 110, LCD_HEIGHT - 45,
-              LCD_WIDTH - 10, LCD_HEIGHT - 10, 120, 120, 120, true);
-
-    qp_flush(lcd);
 }
 
 void ui_task(void) {

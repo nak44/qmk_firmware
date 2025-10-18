@@ -6,6 +6,7 @@ WPM_ENABLE = yes
 # Conditionally include the correct UI based on keyboard variant
 ifneq (,$(findstring /lcd,$(KEYBOARD)))
     SRC += ui_lcd/ui.c
+    SRC += keyboards/sporewoh/loongcat40/graphics/lcd/animu-image-lcd.qgf.c
 else
     SRC += ui_oled/ui.c
 endif
