@@ -9,10 +9,13 @@
 #include "graphics/oled/kicub_rotated.qgf.c"
 #include "graphics/oled/nextpcb_rotated.qgf.c"
 
+#define NUM_IMAGES 3
+
 static painter_device_t oled;
 static painter_image_handle_t animu_image;
 static painter_image_handle_t kicub_image;
 static painter_image_handle_t nextpcb_image;
+static painter_image_handle_t images[NUM_IMAGES];
 static uint8_t current_image_index = 0;
 
 void ui_init(void) {
@@ -28,9 +31,15 @@ void ui_init(void) {
     kicub_image = qp_load_image_mem(gfx_kicub_rotated);
     nextpcb_image = qp_load_image_mem(gfx_nextpcb_rotated);
 
+    // Store in array for easy indexing
+    images[0] = animu_image;
+    images[1] = kicub_image;
+    images[2] = nextpcb_image;
+
     // Initialize and clear the display (no rotation - image is pre-rotated)
     qp_init(oled, QP_ROTATION_0);
-    qp_rect(oled, 0, 0, 256, 64, 0, 0, 0, true);
+    qp_rect(oled, 0, 0, 255, 63, 0, 0, 0, true);
+    qp_flush(oled);
 
     // Draw the animu image (centered on display)
     // Image is 254x64 (pre-rotated), display is 256x64
@@ -48,29 +57,31 @@ void ui_task(void) {
 
 void ui_cycle_image(void) {
     // Cycle to the next image
-    current_image_index = (current_image_index + 1) % 3;
+    current_image_index = (current_image_index + 1) % NUM_IMAGES;
 
     // Clear the display
-    qp_rect(oled, 0, 0, 256, 64, 0, 0, 0, true);
+    qp_rect(oled, 0, 0, 255, 63, 0, 0, 0, true);
     qp_flush(oled);
 
-    // Draw the selected image (centered on display)
-    painter_image_handle_t image_to_draw = NULL;
-
-    switch (current_image_index) {
-        case 0:
-            image_to_draw = animu_image;
-            break;
-        case 1:
-            image_to_draw = kicub_image;
-            break;
-        case 2:
-            image_to_draw = nextpcb_image;
-            break;
+    // Draw the selected image using array indexing
+    if (images[current_image_index] != NULL) {
+        qp_drawimage(oled, 1, 0, images[current_image_index]);
     }
 
-    if (image_to_draw != NULL) {
-        qp_drawimage(oled, 1, 0, image_to_draw);
+    qp_flush(oled);
+}
+
+void ui_cycle_image_reverse(void) {
+    // Cycle to the previous image (add NUM_IMAGES to handle negative modulo correctly)
+    current_image_index = (current_image_index - 1 + NUM_IMAGES) % NUM_IMAGES;
+
+    // Clear the display
+    qp_rect(oled, 0, 0, 255, 63, 0, 0, 0, true);
+    qp_flush(oled);
+
+    // Draw the selected image using array indexing
+    if (images[current_image_index] != NULL) {
+        qp_drawimage(oled, 1, 0, images[current_image_index]);
     }
 
     qp_flush(oled);
