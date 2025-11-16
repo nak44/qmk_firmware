@@ -7,14 +7,12 @@
 
 #include "graphics/oled/longhair_crop_resize_64x256_rotated.qgf.c"
 #include "graphics/oled/sidetails_crop_resize_64x256_rotated.qgf.c"
-#include "graphics/oled/animu-image.qgf.c"
 #include "graphics/oled/kicub_rotated.qgf.c"
 #include "graphics/oled/nextpcb_rotated.qgf.c"
 
-#define NUM_IMAGES 5
+#define NUM_IMAGES 4
 
 static painter_device_t oled;
-static painter_image_handle_t animu_image;
 static painter_image_handle_t kicub_image;
 static painter_image_handle_t nextpcb_image;
 static painter_image_handle_t longhair_image;
@@ -31,7 +29,6 @@ void ui_init(void) {
     }
 
     // Load all three images
-    animu_image = qp_load_image_mem(gfx_animu_image);
     kicub_image = qp_load_image_mem(gfx_kicub_rotated);
     nextpcb_image = qp_load_image_mem(gfx_nextpcb_rotated);
     longhair_image = qp_load_image_mem(gfx_longhair_crop_resize_64x256_rotated);
@@ -40,9 +37,8 @@ void ui_init(void) {
     // Store in array for easy indexing
     images[0] = longhair_image;
     images[1] = sidetails_image;
-    images[2] = animu_image;
-    images[3] = kicub_image;
-    images[4] = nextpcb_image;
+    images[2] = kicub_image;
+    images[3] = nextpcb_image;
 
 
     // Initialize and clear the display (no rotation - image is pre-rotated)
@@ -50,7 +46,7 @@ void ui_init(void) {
     qp_rect(oled, 0, 0, 255, 63, 0, 0, 0, true);
     qp_flush(oled);
 
-    // Draw the animu image (centered on display)
+    // Draw the image (centered on display)
     // Image is 254x64 (pre-rotated), display is 256x64
     // Center horizontally: (256 - 254) / 2 = 1
     if (images[current_image_index] != NULL) {
