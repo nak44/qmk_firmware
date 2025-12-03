@@ -16,12 +16,12 @@ static painter_image_handle_t animu_image;
 #define LCD_WIDTH 320
 #define LCD_HEIGHT 170
 
-#define LCD_OFFSET_ROW 0
-#define LCD_OFFSET_COL 0
+#define LCD_OFFSET_X 35
+#define LCD_OFFSET_Y 0
 
 #define NUM_IMAGES 1
 
-static painter_device_t lcd;
+
 static painter_image_handle_t images[NUM_IMAGES];
 static uint8_t current_image_index = 0;
 
@@ -33,18 +33,21 @@ void ui_init(void) {
     qp_init(lcd, QP_ROTATION_180);
 
     qp_comms_start(lcd);
-    #ifdef LCD_INVERT_COLOUR
+
+    // Display requires inverting
     qp_comms_command(lcd, ST77XX_CMD_INVERT_ON);
-    #else
-    qp_comms_command(lcd, ST77XX_CMD_INVERT_OFF);
-    #endif
+
+    // #ifdef LCD_INVERT_COLOUR
+    // #else
+    // qp_comms_command(lcd, ST77XX_CMD_INVERT_OFF);
+    // #endif
     qp_comms_stop(lcd);
 
 
     qp_power(lcd, true);
 
     // Apply viewport offset for this display panel
-    qp_set_viewport_offsets(lcd, LCD_OFFSET_ROW, LCD_OFFSET_COL);
+    qp_set_viewport_offsets(lcd, LCD_OFFSET_X, LCD_OFFSET_Y);
 
     // Clear the display with yellow background
     qp_rect(lcd, 0, 0, LCD_HEIGHT, LCD_WIDTH, 255, 255, 0, true);
@@ -56,6 +59,10 @@ void ui_init(void) {
         qp_flush(lcd);
         qp_close_image(animu_image);
     }
+
+    // Turn on the backlight
+    gpio_set_pin_output(LCD_BACKLIGHT_PIN);
+    gpio_write_pin_high(LCD_BACKLIGHT_PIN);
 }
 
 void ui_task(void) {
