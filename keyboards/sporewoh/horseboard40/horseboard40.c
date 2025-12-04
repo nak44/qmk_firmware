@@ -6,3 +6,4 @@ void keyboard_post_init_kb(void) {
     // Offload to the user func
     keyboard_post_init_user();
 }
+

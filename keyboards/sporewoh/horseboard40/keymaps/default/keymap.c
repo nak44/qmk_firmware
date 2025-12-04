@@ -6,6 +6,8 @@ extern void ui_init(void);
 extern void ui_task(void);
 extern void ui_cycle_image(void);
 extern void ui_cycle_image_reverse(void);
+extern void ui_suspend(void);
+extern void ui_wakeup(void);
 
 // Custom keycodes
 enum custom_keycodes {
@@ -44,6 +46,14 @@ void keyboard_post_init_user(void) {
 void housekeeping_task_user(void) {
     // Draw the display
     ui_task();
+}
+
+void suspend_power_down_user(void) {
+    ui_suspend();
+}
+
+void suspend_wakeup_init_user(void) {
+    ui_wakeup();
 }
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {

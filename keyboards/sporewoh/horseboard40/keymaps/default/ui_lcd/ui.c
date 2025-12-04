@@ -66,7 +66,20 @@ void ui_init(void) {
 }
 
 void ui_task(void) {
-    // Reserved for future animations or updates
+    static bool backlight_on = true;
+
+    #if QUANTUM_PAINTER_DISPLAY_TIMEOUT > 0
+    bool should_be_on = last_input_activity_elapsed() < QUANTUM_PAINTER_DISPLAY_TIMEOUT;
+
+    if (backlight_on != should_be_on) {
+        if (should_be_on) {
+            gpio_write_pin_high(LCD_BACKLIGHT_PIN);
+        } else {
+            gpio_write_pin_low(LCD_BACKLIGHT_PIN);
+        }
+        backlight_on = should_be_on;
+    }
+    #endif
 }
 
 void ui_cycle_image(void) {
@@ -99,4 +112,14 @@ void ui_cycle_image_reverse(void) {
     }
 
     qp_flush(lcd);
+}
+
+void ui_suspend(void) {
+    gpio_set_pin_output(LCD_BACKLIGHT_PIN);
+    gpio_write_pin_low(LCD_BACKLIGHT_PIN);
+}
+
+void ui_wakeup(void) {
+    gpio_set_pin_output(LCD_BACKLIGHT_PIN);
+    gpio_write_pin_high(LCD_BACKLIGHT_PIN);
 }
