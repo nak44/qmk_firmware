@@ -8,9 +8,9 @@
 #include "qp_st77xx_opcodes.h"
 
 #include "graphics/lcd/animu-image-lcd.qgf.h"
+#include "graphics/lcd/shock.qgf.h"
 
 static painter_device_t lcd;
-static painter_image_handle_t animu_image;
 
 // Display dimensions (320x170 rotated 90 degrees = 170x320)
 #define LCD_WIDTH 320
@@ -19,7 +19,7 @@ static painter_image_handle_t animu_image;
 #define LCD_OFFSET_X 35
 #define LCD_OFFSET_Y 0
 
-#define NUM_IMAGES 1
+#define NUM_IMAGES 2
 
 
 static painter_image_handle_t images[NUM_IMAGES];
@@ -52,12 +52,15 @@ void ui_init(void) {
     // Clear the display with yellow background
     qp_rect(lcd, 0, 0, LCD_HEIGHT, LCD_WIDTH, 255, 255, 0, true);
 
-    // Load and draw the image
-    animu_image = qp_load_image_mem(gfx_cool_lcd);
-    if (animu_image != NULL) {
-        qp_drawimage(lcd, 0, 0, animu_image);
+    // Load images
+    images[0] = qp_load_image_mem(gfx_cool_lcd);
+    images[1] = qp_load_image_mem(gfx_shock);
+
+    // Draw the initial image (shock)
+    current_image_index = 1;
+    if (images[current_image_index] != NULL) {
+        qp_drawimage(lcd, 0, 0, images[current_image_index]);
         qp_flush(lcd);
-        qp_close_image(animu_image);
     }
 
     // Turn on the backlight

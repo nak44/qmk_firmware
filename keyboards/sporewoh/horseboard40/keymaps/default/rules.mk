@@ -7,6 +7,7 @@ WPM_ENABLE = yes
 ifneq (,$(findstring /lcd,$(KEYBOARD)))
     SRC += ui_lcd/ui.c
     SRC += keyboards/sporewoh/horseboard40/graphics/lcd/animu-image-lcd.qgf.c
+    SRC += keyboards/sporewoh/horseboard40/graphics/lcd/shock.qgf.c
 else
     SRC += ui_oled/ui.c
 endif
